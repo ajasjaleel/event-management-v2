@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ArtsFest — Management Portal</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div id="app-loading">
+  <div class="load-logo"><i class="fa-solid fa-masks-theater"></i></div>
+  <i class="fa-solid fa-spinner spin" style="color:var(--green-500);font-size:1.2rem;"></i>
+  <p>Loading ArtsFest…</p>
+</div>
+
+<!-- ═══════════ LOGIN ═══════════ -->
+<section id="login-page" style="display:none;">
+  <div class="login-geo login-geo-1"></div>
+  <div class="login-geo login-geo-2"></div>
+  <div class="login-geo login-geo-3"></div>
+  <div class="login-geo login-geo-4"></div>
+  <div class="login-geo login-geo-5"></div>
+
+  <div class="login-card">
+    <div class="login-logo">
+      <div class="logo-icon"><i class="fa-solid fa-masks-theater"></i></div>
+      <h1>ArtsFest</h1>
+      <p>Management Portal — Sign in to continue</p>
+    </div>
+    <div id="login-error" class="login-error"><i class="fa-solid fa-circle-exclamation"></i><span>Incorrect email or password. Please try again.</span></div>
+    <form class="login-form" id="loginForm" novalidate>
+      <div class="form-group">
+        <label for="uname">Email address</label>
+        <input type="email" id="uname" class="form-control" placeholder="you@school.com" autocomplete="username">
+        <span class="field-error" id="uname-err">Email is required.</span>
+      </div>
+      <div class="form-group">
+        <label for="upass">Password</label>
+        <div class="input-pw">
+          <input type="password" id="upass" class="form-control" placeholder="••••••••" autocomplete="current-password">
+          <button type="button" class="toggle-pw" id="togglePw" tabindex="-1" aria-label="Show password"><i class="fa-regular fa-eye" id="togglePwIcon"></i></button>
+        </div>
+        <span class="field-error" id="upass-err">Password is required.</span>
+      </div>
+      <button type="submit" class="btn btn-primary login-submit" id="loginBtn"><i class="fa-solid fa-right-to-bracket"></i> Sign In</button>
+    </form>
+    <p class="login-hint" style="margin-top:20px;line-height:1.7;">Your account is created by the event administrator.<br>Contact your admin if you need access.</p>
+  </div>
+</section>
+
+<!-- ═══════════ DASHBOARD ═══════════ -->
+<div id="dashboard-page" style="display:none;">
+  <div id="sidebar-overlay"></div>
+  <div class="dash-layout">
+
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-brand">
+        <div class="brand-icon"><i class="fa-solid fa-masks-theater"></i></div>
+        <div><div class="brand-text">ArtsFest</div><div class="brand-sub">Event Management</div></div>
+      </div>
+      <div id="sidebar-role-badge" class="sidebar-role-badge admin"><i class="fa-solid fa-shield-halved"></i> Admin</div>
+      <div style="padding:8px 16px 0;display:flex;align-items:center;gap:6px;font-size:0.72rem;color:var(--slate-400);">
+        <span class="sync-dot"></span> Live sync active
+      </div>
+
+      <nav>
+        <p class="sidebar-section-label">Overview</p>
+        <button class="nav-link active" data-view="view-dashboard"><i class="fa-solid fa-chart-pie"></i> Dashboard</button>
+
+        <p class="sidebar-section-label">Event Management</p>
+        <button class="nav-link" data-view="view-programs"><i class="fa-solid fa-clipboard-list"></i> Programs <span class="nav-count" id="count-programs">0</span></button>
+        <button class="nav-link" data-view="view-teams"><i class="fa-solid fa-flag"></i> Teams <span class="nav-count" id="count-teams">0</span></button>
+        <button class="nav-link" data-view="view-students"><i class="fa-solid fa-user-check"></i> Students <span class="nav-count" id="count-students">0</span></button>
+
+        <p class="sidebar-section-label">Assignments</p>
+        <button class="nav-link" data-view="view-assign-individual"><i class="fa-solid fa-user-pen"></i> Assign Individual</button>
+        <button class="nav-link" data-view="view-assign-group"><i class="fa-solid fa-people-group"></i> Assign Group</button>
+        <button class="nav-link" data-view="view-list-program"><i class="fa-solid fa-list-check"></i> List by Program</button>
+        <button class="nav-link" data-view="view-list-student"><i class="fa-solid fa-address-card"></i> List by Student</button>
+
+        <p class="sidebar-section-label">Scoring</p>
+        <button class="nav-link" data-view="view-marks"><i class="fa-solid fa-pen-ruler"></i> Marks</button>
+        <button class="nav-link" data-view="view-results"><i class="fa-solid fa-trophy"></i> Results</button>
+        <button class="nav-link" data-view="view-leaderboard"><i class="fa-solid fa-ranking-star"></i> Leaderboard</button>
+
+        <p class="sidebar-section-label">Administration</p>
+        <button class="nav-link" data-view="view-settings" data-admin><i class="fa-solid fa-gear"></i> Settings</button>
+        <button class="nav-link danger" id="logoutBtn"><i class="fa-solid fa-arrow-right-from-bracket"></i> Sign Out</button>
+      </nav>
+    </aside>
+
+    <main class="dash-main">
+      <header class="topbar">
+        <div class="topbar-left">
+          <button class="btn-icon" id="mobile-menu-btn" aria-label="Open menu"><i class="fa-solid fa-bars"></i></button>
+          <h1 id="page-title">Dashboard</h1>
+        </div>
+        <div class="topbar-right">
+          <div class="flex items-center gap-3">
+            <div style="text-align:right;">
+              <div style="font-size:0.82rem;font-weight:600;" id="topbar-username">—</div>
+              <div style="font-size:0.72rem;color:var(--slate-500);" id="topbar-role-label">Loading…</div>
+            </div>
+            <div class="avatar" id="topbar-avatar">—</div>
+          </div>
+        </div>
+      </header>
+
+      <div class="dash-body">
+
+        <!-- DASHBOARD -->
+        <section class="section-view active" id="view-dashboard">
+          <div class="stats-grid">
+            <div class="stat-card"><div class="stat-icon-wrap green"><i class="fa-solid fa-users"></i></div><div><div class="stat-num" id="stat-participants">0</div><div class="stat-lbl">Students</div></div></div>
+            <div class="stat-card"><div class="stat-icon-wrap amber"><i class="fa-solid fa-flag"></i></div><div><div class="stat-num" id="stat-teams">0</div><div class="stat-lbl">Teams</div></div></div>
+            <div class="stat-card"><div class="stat-icon-wrap blue"><i class="fa-solid fa-layer-group"></i></div><div><div class="stat-num" id="stat-programs">0</div><div class="stat-lbl">Programs</div></div></div>
+            <div class="stat-card"><div class="stat-icon-wrap red"><i class="fa-solid fa-star"></i></div><div><div class="stat-num" id="stat-results">0</div><div class="stat-lbl">Results Declared</div></div></div>
+          </div>
+          <div class="dash-grid">
+            <div class="card"><div class="card-header"><h3><i class="fa-solid fa-bolt" style="color:var(--amber-600);font-size:0.85rem;margin-right:6px;"></i>Recent Activity</h3></div><div class="card-body" id="activity-feed"><p class="text-muted" style="font-size:0.82rem;">No activity yet.</p></div></div>
+            <div class="card"><div class="card-header"><h3><i class="fa-solid fa-ranking-star" style="color:var(--green-700);font-size:0.85rem;margin-right:6px;"></i>Top Teams</h3></div><div class="card-body" id="mini-leaderboard"><p class="text-muted" style="font-size:0.82rem;">Enter results to see standings.</p></div></div>
+          </div>
+        </section>
+
+        <!-- PROGRAMS -->
+        <section class="section-view" id="view-programs">
+          <div class="section-header">
+            <div><h2>Program Catalog</h2><p class="text-muted">All competing events and their details.</p></div>
+            <div class="flex gap-2">
+              <button class="btn btn-secondary" id="btn-export-programs"><i class="fa-solid fa-download"></i> CSV</button>
+              <button class="btn btn-primary" id="btn-add-program" data-admin><i class="fa-solid fa-plus"></i> Add Program</button>
+            </div>
+          </div>
+          <div class="card">
+            <div class="table-toolbar">
+              <div class="search-box"><i class="fa-solid fa-magnifying-glass"></i><input type="text" id="prog-search" placeholder="Search programs…"></div>
+              <div class="filter-row">
+                <select id="prog-filter-cat"><option value="">All Categories</option><option>Sub Junior</option><option>Junior</option><option>Senior</option><option>General</option></select>
+                <select id="prog-filter-type"><option value="">All Types</option><option>Individual</option><option>Group</option><option>Team</option></select>
+                <select id="prog-filter-stage"><option value="">All Stage Types</option><option value="On-Stage">On-Stage</option><option value="Off-Stage">Off-Stage</option></select>
+              </div>
+            </div>
+            <div class="table-wrap" style="max-height:520px;overflow-y:auto;">
+              <table class="data-table">
+                <thead><tr><th>#</th><th>Program Name</th><th>Category</th><th>Type</th><th>Max Team</th><th>Stage</th><th>Time</th><th>Actions</th></tr></thead>
+                <tbody id="programs-tbody"></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- TEAMS -->
+        <section class="section-view" id="view-teams">
+          <div class="section-header">
+            <div><h2>Teams</h2><p class="text-muted">Competing groups and their live point totals.</p></div>
+            <div class="flex gap-2">
+              <button class="btn btn-secondary" id="btn-export-teams"><i class="fa-solid fa-download"></i> CSV</button>
+              <button class="btn btn-primary" id="btn-add-team" data-admin><i class="fa-solid fa-plus"></i> Register Team</button>
+            </div>
+          </div>
+          <div class="card">
+            <div class="table-toolbar"><div class="search-box"><i class="fa-solid fa-magnifying-glass"></i><input type="text" id="team-search" placeholder="Search teams…"></div></div>
+            <div class="table-wrap">
+              <table class="data-table">
+                <thead><tr><th>Rank</th><th>Team Name</th><th>Leader</th><th>Members</th><th>Points</th><th>Actions</th></tr></thead>
+                <tbody id="teams-tbody"></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- STUDENTS -->
+        <section class="section-view" id="view-students">
+          <div class="section-header">
+            <div><h2>Students</h2><p class="text-muted">Register students and view them by category or team.</p></div>
+            <div class="flex gap-2">
+              <button class="btn btn-secondary" id="btn-export-students"><i class="fa-solid fa-download"></i> CSV</button>
+              <button class="btn btn-primary" id="btn-add-student" data-admin><i class="fa-solid fa-user-plus"></i> Add Student</button>
+            </div>
+          </div>
+          <div class="card">
+            <div class="table-toolbar">
+              <div class="search-box"><i class="fa-solid fa-magnifying-glass"></i><input type="text" id="student-search" placeholder="Search by name or chest no…"></div>
+              <div class="filter-row">
+                <select id="student-filter-cat"><option value="">All Categories</option><option>Sub Junior</option><option>Junior</option><option>Senior</option><option>General</option></select>
+                <select id="student-filter-team"><option value="">All Teams</option></select>
+              </div>
+            </div>
+            <div class="table-wrap">
+              <table class="data-table">
+                <thead><tr><th>#</th><th>Chest No.</th><th>Name</th><th>Team</th><th>Category</th><th>Actions</th></tr></thead>
+                <tbody id="students-tbody"></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- ASSIGN INDIVIDUAL -->
+        <section class="section-view" id="view-assign-individual">
+          <div class="section-header"><div><h2>Assign Individual Program</h2><p class="text-muted">Assign a program to a student by chest number.</p></div></div>
+          <div class="card" style="margin-bottom:20px;" data-admin>
+            <div class="card-body">
+              <div class="form-grid cols-3">
+                <div class="form-group"><label>Chest Number</label><input type="text" class="form-control" id="ai-chest" placeholder="e.g. 101"></div>
+                <div class="form-group span-2"><label>Program</label><select class="form-control" id="ai-program"><option value="">Select program…</option></select></div>
+              </div>
+              <div id="ai-preview" style="margin-top:10px;font-size:0.82rem;"></div>
+              <span class="field-error" id="ai-err" style="margin-top:6px;"></span>
+              <div style="text-align:right;margin-top:14px;"><button class="btn btn-primary" id="btn-assign-individual"><i class="fa-solid fa-plus"></i> Assign</button></div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="table-toolbar" style="justify-content:flex-end;"><button class="btn btn-secondary" id="btn-export-assign-individual"><i class="fa-solid fa-download"></i> CSV</button></div>
+            <div class="table-wrap"><table class="data-table"><thead><tr><th>Chest No.</th><th>Name</th><th>Team</th><th>Category</th><th>Program</th><th>Actions</th></tr></thead><tbody id="assign-individual-tbody"></tbody></table></div>
+          </div>
+        </section>
+
+        <!-- ASSIGN GROUP -->
+        <section class="section-view" id="view-assign-group">
+          <div class="section-header">
+            <div><h2>Assign Group Program</h2><p class="text-muted">Assign a team and its members to a group program.</p></div>
+            <button class="btn btn-primary" id="btn-add-assign-group" data-admin><i class="fa-solid fa-plus"></i> Assign Group</button>
+          </div>
+          <div class="card">
+            <div class="table-toolbar" style="justify-content:flex-end;"><button class="btn btn-secondary" id="btn-export-assign-group"><i class="fa-solid fa-download"></i> CSV</button></div>
+            <div class="table-wrap"><table class="data-table"><thead><tr><th>Program</th><th>Team</th><th>Members</th><th>Actions</th></tr></thead><tbody id="assign-group-tbody"></tbody></table></div>
+          </div>
+        </section>
+
+        <!-- LIST BY PROGRAM -->
+        <section class="section-view" id="view-list-program">
+          <div class="section-header"><div><h2>List by Program</h2><p class="text-muted">See who is assigned to each program.</p></div></div>
+          <div class="card">
+            <div class="table-toolbar">
+              <div class="filter-row">
+                <select id="lp-category"><option value="">All Categories</option><option>Sub Junior</option><option>Junior</option><option>Senior</option><option>General</option></select>
+                <select id="lp-program"><option value="">All Programs</option></select>
+              </div>
+              <button class="btn btn-secondary" id="btn-export-list-program"><i class="fa-solid fa-download"></i> CSV</button>
+            </div>
+            <div class="table-wrap"><table class="data-table"><thead><tr><th>Program</th><th>Category</th><th>Type</th><th>Chest No. / Team</th><th>Name(s)</th><th>Team</th></tr></thead><tbody id="list-program-tbody"></tbody></table></div>
+          </div>
+        </section>
+
+        <!-- LIST BY STUDENT -->
+        <section class="section-view" id="view-list-student">
+          <div class="section-header"><div><h2>List by Student</h2><p class="text-muted">See every program a student is enrolled in.</p></div></div>
+          <div class="card">
+            <div class="table-toolbar">
+              <div class="search-box"><i class="fa-solid fa-magnifying-glass"></i><input type="text" id="ls-search" placeholder="Search by chest no. or name…"></div>
+              <button class="btn btn-secondary" id="btn-export-list-student"><i class="fa-solid fa-download"></i> CSV</button>
+            </div>
+            <div class="table-wrap"><table class="data-table"><thead><tr><th>Chest No.</th><th>Name</th><th>Team</th><th>Programs</th></tr></thead><tbody id="list-student-tbody"></tbody></table></div>
+          </div>
+        </section>
+
+        <!-- MARKS -->
+        <section class="section-view" id="view-marks">
+          <div class="section-header"><div><h2>Marks</h2><p class="text-muted">Enter judge marks per participant and compute averages.</p></div></div>
+          <div class="card" style="margin-bottom:20px;">
+            <div class="card-body">
+              <div class="form-grid cols-3">
+                <div class="form-group span-2"><label>Program</label><select class="form-control" id="marks-program"><option value="">Select program…</option></select></div>
+                <div class="form-group"><label>Number of Judges</label><input type="number" class="form-control" id="marks-judges" value="3" min="1" max="10"></div>
+              </div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="table-toolbar" style="justify-content:flex-end;"><button class="btn btn-secondary" id="btn-export-marks"><i class="fa-solid fa-download"></i> CSV</button></div>
+            <div id="marks-body"><p class="text-muted" style="padding:24px;text-align:center;">Select a program to enter or view marks.</p></div>
+          </div>
+        </section>
+
+        <!-- RESULTS -->
+        <section class="section-view" id="view-results">
+          <div class="section-header">
+            <div><h2>Results &amp; Scoring</h2><p class="text-muted"><span data-admin>Declare results for completed programs.</span><span data-user-only>Live results declared by the admin.</span></p></div>
+            <button class="btn btn-secondary" id="btn-export-results"><i class="fa-solid fa-download"></i> CSV</button>
+          </div>
+          <div class="info-banner" data-user-only><i class="fa-solid fa-circle-info"></i> Results are published by the event administrator. You can view them here in real time.</div>
+          <div class="card">
+            <div class="table-toolbar">
+              <div class="search-box"><i class="fa-solid fa-magnifying-glass"></i><input type="text" id="result-search" placeholder="Search programs…"></div>
+              <div class="filter-row">
+                <select id="result-filter-cat"><option value="">All Categories</option><option>Sub Junior</option><option>Junior</option><option>Senior</option><option>General</option></select>
+                <select id="result-filter-status"><option value="">All Status</option><option value="pending">Pending</option><option value="entered">Declared</option></select>
+              </div>
+            </div>
+            <div class="table-wrap"><table class="data-table"><thead><tr><th>Program</th><th>Category</th><th>1st</th><th>2nd</th><th>3rd</th><th>Status</th><th>Actions</th></tr></thead><tbody id="results-tbody"></tbody></table></div>
+          </div>
+        </section>
+
+        <!-- LEADERBOARD -->
+        <section class="section-view" id="view-leaderboard">
+          <div class="section-header">
+            <div><h2>Leaderboard</h2><p class="text-muted">Live standings — updates automatically across all devices.</p></div>
+            <div class="flex gap-2 items-center">
+              <span class="sync-dot"></span><span class="text-muted" style="font-size:0.78rem;">Live</span>
+              <button class="btn btn-secondary" id="btn-export-leaderboard"><i class="fa-solid fa-download"></i> CSV</button>
+            </div>
+          </div>
+          <div class="card"><div class="table-wrap"><table class="data-table"><thead><tr><th>Rank</th><th>Team</th><th>Gold</th><th>Silver</th><th>Bronze</th><th>Total Points</th><th>Relative</th></tr></thead><tbody id="leaderboard-tbody"></tbody></table></div></div>
+        </section>
+
+        <!-- SETTINGS -->
+        <section class="section-view" id="view-settings" data-admin>
+          <div class="section-header"><div><h2>Settings</h2><p class="text-muted">Configure the event and your account.</p></div></div>
+          <p class="settings-section-label">Event Configuration</p>
+          <div class="settings-card">
+            <div class="settings-row"><div><div class="settings-label">Event Name</div><div class="settings-sub">Shown across the portal.</div></div><input type="text" class="form-control" id="setting-event-name" style="max-width:260px;"></div>
+            <div class="settings-row"><div><div class="settings-label">Points — 1st / 2nd / 3rd</div><div class="settings-sub">Points awarded per placement.</div></div>
+              <div class="flex gap-2"><input type="number" class="form-control" id="setting-pts-1" style="width:60px;text-align:center;" min="1"><input type="number" class="form-control" id="setting-pts-2" style="width:60px;text-align:center;" min="1"><input type="number" class="form-control" id="setting-pts-3" style="width:60px;text-align:center;" min="1"></div></div>
+            <div class="settings-row"><div><div class="settings-label">Registration Open</div><div class="settings-sub">Allow new student registrations.</div></div><label class="toggle"><input type="checkbox" id="setting-reg-open"><span class="toggle-track"><span class="toggle-thumb"></span></span></label></div>
+            <div class="settings-row"><div><div class="settings-label">Results Public</div><div class="settings-sub">Publish results to a public-facing page.</div></div><label class="toggle"><input type="checkbox" id="setting-results-public"><span class="toggle-track"><span class="toggle-thumb"></span></span></label></div>
+          </div>
+          <p class="settings-section-label" style="margin-top:24px;">Account</p>
+          <div class="settings-card">
+            <div class="settings-row"><div><div class="settings-label">Change Password</div><div class="settings-sub">Update your sign-in password.</div></div><button class="btn btn-secondary btn-sm" id="btn-change-pw">Change Password</button></div>
+            <div class="settings-row"><div><div class="settings-label">Export All Data</div><div class="settings-sub">Download the full event database as JSON.</div></div><button class="btn btn-secondary btn-sm" id="btn-export"><i class="fa-solid fa-download"></i> Export JSON</button></div>
+          </div>
+          <div style="text-align:right;margin-top:16px;"><button class="btn btn-primary" id="btn-save-settings"><i class="fa-solid fa-floppy-disk"></i> Save Settings</button></div>
+        </section>
+
+      </div>
+    </main>
+  </div>
+</div>
+
+<!-- ═══════════ MODALS ═══════════ -->
+
+<div class="modal-overlay" id="modal-program">
+  <div class="modal">
+    <div class="modal-header"><h3 id="modal-program-title">Add Program</h3><button class="modal-close" data-close="modal-program"><i class="fa-solid fa-xmark"></i></button></div>
+    <div class="modal-body">
+      <form id="form-program" novalidate>
+        <input type="hidden" id="prog-id">
+        <div class="form-grid">
+          <div class="form-group span-2"><label>Program Name *</label><input type="text" class="form-control" id="prog-name" maxlength="80"><span class="field-error" id="prog-name-err">Name is required.</span></div>
+          <div class="form-group"><label>Category *</label><select class="form-control" id="prog-cat"><option value="">Select category…</option><option>Sub Junior</option><option>Junior</option><option>Senior</option><option>General</option></select><span class="field-error" id="prog-cat-err">Category is required.</span></div>
+          <div class="form-group"><label>Type *</label><select class="form-control" id="prog-type"><option value="">Select type…</option><option>Individual</option><option>Group</option><option>Team</option></select><span class="field-error" id="prog-type-err">Type is required.</span></div>
+          <div class="form-group"><label>Stage Type</label><select class="form-control" id="prog-stage"><option value="">Select stage type…</option><option value="On-Stage">On-Stage</option><option value="Off-Stage">Off-Stage</option></select></div>
+          <div class="form-group"><label>Scheduled Time</label><input type="time" class="form-control" id="prog-time"></div>
+          <div class="form-group span-2"><label>Max Team Size</label><input type="number" class="form-control" id="prog-maxteam" min="1" placeholder="e.g. 3"></div>
+        </div>
+      </form>
+    </div>
+    <div class="modal-footer"><button class="btn btn-secondary" data-close="modal-program">Cancel</button><button class="btn btn-primary" id="btn-save-program"><i class="fa-solid fa-floppy-disk"></i> Save Program</button></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-team">
+  <div class="modal">
+    <div class="modal-header"><h3 id="modal-team-title">Register Team</h3><button class="modal-close" data-close="modal-team"><i class="fa-solid fa-xmark"></i></button></div>
+    <div class="modal-body">
+      <form id="form-team" novalidate>
+        <input type="hidden" id="team-id">
+        <div class="form-grid">
+          <div class="form-group span-2"><label>Team Name *</label><input type="text" class="form-control" id="team-name" maxlength="60"><span class="field-error" id="team-name-err">Name is required.</span></div>
+          <div class="form-group span-2"><label>Team Leader *</label><input type="text" class="form-control" id="team-leader" placeholder="Leader's full name"><span class="field-error" id="team-leader-err">Leader name is required.</span></div>
+        </div>
+      </form>
+    </div>
+    <div class="modal-footer"><button class="btn btn-secondary" data-close="modal-team">Cancel</button><button class="btn btn-primary" id="btn-save-team"><i class="fa-solid fa-floppy-disk"></i> Save Team</button></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-view-team">
+  <div class="modal wide">
+    <div class="modal-header"><h3 id="modal-view-team-title">Team Roster</h3><button class="modal-close" data-close="modal-view-team"><i class="fa-solid fa-xmark"></i></button></div>
+    <div class="modal-body" id="view-team-body"></div>
+    <div class="modal-footer"><button class="btn btn-secondary" data-close="modal-view-team">Close</button><button class="btn btn-primary" id="btn-export-team-roster"><i class="fa-solid fa-download"></i> Download CSV</button></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-student">
+  <div class="modal wide">
+    <div class="modal-header"><h3 id="modal-student-title">Add Student</h3><button class="modal-close" data-close="modal-student"><i class="fa-solid fa-xmark"></i></button></div>
+    <div class="modal-body">
+      <form id="form-student" novalidate>
+        <input type="hidden" id="student-id">
+        <div class="form-grid">
+          <div class="form-group"><label>Full Name *</label><input type="text" class="form-control" id="student-name"><span class="field-error" id="student-name-err">Name is required.</span></div>
+          <div class="form-group"><label>Chest Number *</label><input type="text" class="form-control" id="student-chest"><span class="field-error" id="student-chest-err">Chest number is required.</span></div>
+          <div class="form-group"><label>Team *</label><select class="form-control" id="student-team"><option value="">Select team…</option></select><span class="field-error" id="student-team-err">Team is required.</span></div>
+          <div class="form-group"><label>Category *</label><select class="form-control" id="student-category"><option value="">Select category…</option><option>Sub Junior</option><option>Junior</option><option>Senior</option><option>General</option></select><span class="field-error" id="student-category-err">Category is required.</span></div>
+        </div>
+      </form>
+    </div>
+    <div class="modal-footer"><button class="btn btn-secondary" data-close="modal-student">Cancel</button><button class="btn btn-primary" id="btn-save-student"><i class="fa-solid fa-floppy-disk"></i> Save Student</button></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-assign-group">
+  <div class="modal wide">
+    <div class="modal-header"><h3 id="modal-assign-group-title">Assign Group Program</h3><button class="modal-close" data-close="modal-assign-group"><i class="fa-solid fa-xmark"></i></button></div>
+    <div class="modal-body">
+      <input type="hidden" id="ag-id">
+      <div class="form-grid">
+        <div class="form-group"><label>Program *</label><select class="form-control" id="ag-program"><option value="">Select program…</option></select></div>
+        <div class="form-group"><label>Team *</label><select class="form-control" id="ag-team"><option value="">Select team…</option></select></div>
+        <div class="form-group span-2">
+          <label>Members</label>
+          <div id="ag-members-list" style="max-height:200px;overflow-y:auto;border:1px solid var(--slate-200);border-radius:var(--radius);padding:10px;display:grid;grid-template-columns:1fr 1fr;gap:6px;">
+            <p class="text-muted" style="grid-column:span 2;">Select a team first.</p>
+          </div>
+        </div>
+      </div>
+      <span class="field-error" id="ag-err" style="margin-top:8px;"></span>
+    </div>
+    <div class="modal-footer"><button class="btn btn-secondary" data-close="modal-assign-group">Cancel</button><button class="btn btn-primary" id="btn-save-assign-group"><i class="fa-solid fa-floppy-disk"></i> Save</button></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-result">
+  <div class="modal wide">
+    <div class="modal-header"><h3 id="modal-result-title">Declare Result</h3><button class="modal-close" data-close="modal-result"><i class="fa-solid fa-xmark"></i></button></div>
+    <div class="modal-body">
+      <div id="modal-result-prog-info" style="background:var(--slate-50);border-radius:var(--radius);padding:14px;margin-bottom:16px;font-size:0.85rem;color:var(--slate-600);"></div>
+      <div style="margin-bottom:16px;"><button class="btn btn-secondary btn-sm" id="btn-auto-from-marks"><i class="fa-solid fa-wand-magic-sparkles"></i> Auto-fill from Marks</button></div>
+      <input type="hidden" id="result-prog-id">
+      <div class="form-grid cols-3">
+        <div class="form-group"><label><span style="background:#fef3c7;color:#92400e;padding:3px 8px;border-radius:99px;font-size:0.72rem;font-weight:600;">🥇 1st</span></label><select class="form-control" id="result-1st"><option value="">— None —</option></select></div>
+        <div class="form-group"><label><span style="background:var(--slate-100);color:var(--slate-600);padding:3px 8px;border-radius:99px;font-size:0.72rem;font-weight:600;">🥈 2nd</span></label><select class="form-control" id="result-2nd"><option value="">— None —</option></select></div>
+        <div class="form-group"><label><span style="background:#fce7d6;color:#9a3412;padding:3px 8px;border-radius:99px;font-size:0.72rem;font-weight:600;">🥉 3rd</span></label><select class="form-control" id="result-3rd"><option value="">— None —</option></select></div>
+      </div>
+      <span class="field-error" id="result-dup-err" style="margin-top:8px;"></span>
+      <div id="points-preview" style="margin-top:16px;background:var(--green-50);border:1px solid var(--green-100);border-radius:var(--radius);padding:12px;font-size:0.82rem;display:none;">
+        <strong style="font-size:0.8rem;">Points that will be awarded:</strong>
+        <div id="points-preview-content" style="margin-top:8px;display:flex;flex-wrap:wrap;gap:8px;"></div>
+      </div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-secondary" data-close="modal-result">Cancel</button><button class="btn btn-primary" id="btn-save-result"><i class="fa-solid fa-floppy-disk"></i> Publish Result</button></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-change-pw">
+  <div class="modal narrow">
+    <div class="modal-header"><h3>Change Password</h3><button class="modal-close" data-close="modal-change-pw"><i class="fa-solid fa-xmark"></i></button></div>
+    <div class="modal-body">
+      <form id="form-change-pw" novalidate>
+        <div class="form-grid cols-1">
+          <div class="form-group"><label>Current Password</label><input type="password" class="form-control" id="pw-current"><span class="field-error" id="pw-current-err">Incorrect current password.</span></div>
+          <div class="form-group"><label>New Password</label><input type="password" class="form-control" id="pw-new" placeholder="At least 6 characters"><span class="field-error" id="pw-new-err">Must be at least 6 characters.</span></div>
+          <div class="form-group"><label>Confirm New Password</label><input type="password" class="form-control" id="pw-confirm"><span class="field-error" id="pw-confirm-err">Passwords do not match.</span></div>
+        </div>
+      </form>
+    </div>
+    <div class="modal-footer"><button class="btn btn-secondary" data-close="modal-change-pw">Cancel</button><button class="btn btn-primary" id="btn-save-pw"><i class="fa-solid fa-lock"></i> Update Password</button></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="confirm-dialog">
+  <div class="modal narrow">
+    <div class="modal-body" style="text-align:center;padding:32px 28px;">
+      <div class="confirm-icon"><i class="fa-solid fa-triangle-exclamation"></i></div>
+      <h3 id="confirm-title" style="margin-bottom:8px;font-size:1rem;">Confirm</h3>
+      <p id="confirm-msg" style="color:var(--slate-600);font-size:0.85rem;margin-bottom:24px;">This cannot be undone.</p>
+      <div style="display:flex;gap:10px;justify-content:center;"><button class="btn btn-secondary" id="confirm-cancel">Cancel</button><button class="btn btn-danger" id="confirm-ok">Delete</button></div>
+    </div>
+  </div>
+</div>
+
+<div class="toast-container" id="toast-container"></div>
+
+<script type="module" src="app.js"></script>
+</body>
+</html>
