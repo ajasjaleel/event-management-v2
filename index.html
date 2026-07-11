@@ -139,7 +139,7 @@
               <div class="search-box"><i class="fa-solid fa-magnifying-glass"></i><input type="text" id="prog-search" placeholder="Search programs…"></div>
               <div class="filter-row">
                 <select id="prog-filter-cat"><option value="">All Categories</option><option>Sub Junior</option><option>Junior</option><option>Senior</option><option>General</option></select>
-                <select id="prog-filter-type"><option value="">All Types</option><option>Individual</option><option>Group</option><option>Team</option></select>
+                <select id="prog-filter-type"><option value="">All Types</option><option>Individual</option><option>Group</option></select>
                 <select id="prog-filter-stage"><option value="">All Stage Types</option><option value="On-Stage">On-Stage</option><option value="Off-Stage">Off-Stage</option></select>
               </div>
             </div>
@@ -340,7 +340,7 @@
         <div class="form-grid">
           <div class="form-group span-2"><label>Program Name *</label><input type="text" class="form-control" id="prog-name" maxlength="80"><span class="field-error" id="prog-name-err">Name is required.</span></div>
           <div class="form-group"><label>Category *</label><select class="form-control" id="prog-cat"><option value="">Select category…</option><option>Sub Junior</option><option>Junior</option><option>Senior</option><option>General</option></select><span class="field-error" id="prog-cat-err">Category is required.</span></div>
-          <div class="form-group"><label>Type *</label><select class="form-control" id="prog-type"><option value="">Select type…</option><option>Individual</option><option>Group</option><option>Team</option></select><span class="field-error" id="prog-type-err">Type is required.</span></div>
+          <div class="form-group"><label>Type *</label><select class="form-control" id="prog-type"><option value="">Select type…</option><option>Individual</option><option>Group</option></select><span class="field-error" id="prog-type-err">Type is required.</span></div>
           <div class="form-group"><label>Stage Type</label><select class="form-control" id="prog-stage"><option value="">Select stage type…</option><option value="On-Stage">On-Stage</option><option value="Off-Stage">Off-Stage</option></select></div>
           <div class="form-group"><label>Scheduled Time</label><input type="time" class="form-control" id="prog-time"></div>
           <div class="form-group span-2"><label>Max Team Size</label><input type="number" class="form-control" id="prog-maxteam" min="1" placeholder="e.g. 3"></div>
@@ -403,7 +403,7 @@
         <div class="form-group"><label>Team *</label><select class="form-control" id="ag-team"><option value="">Select team…</option></select></div>
         <div class="form-group span-2">
           <label>Members</label>
-          <div id="ag-members-list" style="max-height:200px;overflow-y:auto;border:1px solid var(--slate-200);border-radius:var(--radius);padding:10px;display:grid;grid-template-columns:1fr 1fr;gap:6px;">
+          <div id="ag-members-list" class="ag-members-grid">
             <p class="text-muted" style="grid-column:span 2;">Select a team first.</p>
           </div>
         </div>

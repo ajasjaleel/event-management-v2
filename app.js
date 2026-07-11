@@ -9,7 +9,7 @@ import {
   getStudents, addStudent, updateStudent, deleteStudentCascade,
   getAssignments, addAssignment, updateAssignment, deleteAssignmentCascade,
   getMarks, setMark, deleteMark,
-  getResults, setResult,
+  getResults, setResult, deleteResult,
   logActivity, getRecentActivity, downloadCSV,
   listenToPrograms, listenToTeams, listenToStudents, listenToAssignments,
   listenToMarks, listenToResults, listenToActivity
@@ -88,7 +88,15 @@ function applyRoleToUI() {
 // ══════════════════════════════════════════════════════
 // PAGE SWITCH / NAV
 // ══════════════════════════════════════════════════════
-function showLogin()     { document.getElementById("login-page").style.display = "flex"; document.getElementById("dashboard-page").style.display = "none"; }
+function showLogin()     {
+  document.getElementById("login-page").style.display = "flex"; document.getElementById("dashboard-page").style.display = "none";
+  // Reset the login button — it's left in its "Signing in…" / disabled
+  // state after a successful login (the page just navigates away from
+  // it), so without this it comes back stuck the next time showLogin()
+  // runs, e.g. right after signing out.
+  const btn = document.getElementById("loginBtn");
+  if (btn) { btn.innerHTML = '<i class="fa-solid fa-right-to-bracket"></i> Sign In'; btn.disabled = false; }
+}
 function showDashboard() { document.getElementById("login-page").style.display = "none"; document.getElementById("dashboard-page").style.display = "block"; }
 function hideLoading()   { document.getElementById("app-loading")?.remove(); }
 
@@ -134,6 +142,19 @@ function setText(id, v) { const el = document.getElementById(id); if (el) el.tex
 // ══════════════════════════════════════════════════════
 const teamById    = id => state.teams.find(t => t.id === id);
 const studentById = id => state.students.find(s => s.id === id);
+
+// Normalizes a chest number for comparison: trims outer whitespace and
+// strips any internal whitespace too (e.g. a stray space pasted in from
+// a spreadsheet, or a mobile keyboard inserting one) so a real, existing
+// chest number never fails to match just because of formatting. Used
+// everywhere a chest number is looked up, so every lookup behaves
+// identically instead of each spot having its own copy of the logic.
+function normalizeChest(v) { return String(v ?? "").replace(/\s+/g, "").trim(); }
+function findStudentByChest(raw) {
+  const key = normalizeChest(raw);
+  if (!key) return null;
+  return state.students.find(s => normalizeChest(s.chestNumber) === key) || null;
+}
 const progById    = id => state.programs.find(p => p.id === id);
 
 // A "participant key" unifies individual (student) & group (team) competitors
@@ -222,13 +243,19 @@ function renderDashboard() {
 // ══════════════════════════════════════════════════════
 // PROGRAMS
 // ══════════════════════════════════════════════════════
-function renderPrograms() {
+// Shared by the table render and the CSV export so the export always
+// reflects exactly what's currently on screen (active search + filters),
+// instead of silently dumping every program regardless of what's shown.
+function filteredPrograms() {
   const search = val("prog-search").toLowerCase();
   const catF = val("prog-filter-cat"), typeF = val("prog-filter-type"), stageF = val("prog-filter-stage");
-  const filtered = state.programs.filter(p =>
+  return state.programs.filter(p =>
     (p.name.toLowerCase().includes(search) || p.category.toLowerCase().includes(search)) &&
     (!catF || p.category === catF) && (!typeF || p.type === typeF) &&
     (!stageF || p.stage === stageF));
+}
+function renderPrograms() {
+  const filtered = filteredPrograms();
 
   const tbody = document.getElementById("programs-tbody");
   tbody.innerHTML = filtered.length ? filtered.map((p, i) => `
@@ -301,18 +328,28 @@ on("prog-filter-cat", "change", renderPrograms);
 on("prog-filter-type", "change", renderPrograms);
 on("prog-filter-stage", "change", renderPrograms);
 on("btn-export-programs", "click", () => {
-  downloadCSV("programs", ["Category", "Program Name", "Type", "Max Team Size", "Stage Type", "Time"],
-    state.programs.map(p => [p.category, p.name, p.type, p.maxTeam || "", p.stage || "", p.time || ""]));
+  // Same rows (respecting the active search/filters) and the same column
+  // order as the on-screen table: #, Program Name, Category, Type, Max
+  // Team, Stage, Time, Actions — minus the row number and Actions column,
+  // which don't make sense in a CSV.
+  downloadCSV("programs", ["Program Name", "Category", "Type", "Max Team", "Stage", "Time"],
+    filteredPrograms().map(p => [p.name, p.category, p.type, p.maxTeam || "", p.stage || "", p.time || ""]));
 });
 
 // ══════════════════════════════════════════════════════
 // TEAMS
 // ══════════════════════════════════════════════════════
-function renderTeams() {
+// Shared by the table render and the CSV export: same points-ranked
+// order and the same search filter, so "Rank" in the CSV always lines up
+// with the rank badge shown in the table.
+function filteredSortedTeams() {
   const search = val("team-search").toLowerCase();
   const { pts, medals } = computePoints();
   const sorted = [...state.teams].map(t => ({ ...t, pts: pts[t.id] || 0, medals: medals[t.id] || { g: 0, s: 0, b: 0 } })).sort((a, b) => b.pts - a.pts);
-  const filtered = sorted.filter(t => t.name.toLowerCase().includes(search) || (t.leader || "").toLowerCase().includes(search));
+  return sorted.filter(t => t.name.toLowerCase().includes(search) || (t.leader || "").toLowerCase().includes(search));
+}
+function renderTeams() {
+  const filtered = filteredSortedTeams();
 
   const tbody = document.getElementById("teams-tbody");
   tbody.innerHTML = filtered.length ? filtered.map((t, i) => {
@@ -380,9 +417,12 @@ on("btn-save-team", "click", async () => {
 });
 on("team-search", "input", renderTeams);
 on("btn-export-teams", "click", () => {
-  const { pts, medals } = computePoints();
-  downloadCSV("teams", ["Team Name", "Leader", "Members", "Points", "Gold", "Silver", "Bronze"],
-    state.teams.map(t => [t.name, t.leader, state.students.filter(s => s.teamId === t.id).length, pts[t.id] || 0, medals[t.id]?.g || 0, medals[t.id]?.s || 0, medals[t.id]?.b || 0]));
+  // Same rows (respecting the active search) and rank order as the
+  // on-screen table, with an explicit Rank column added since a CSV
+  // can't show the rank badge.
+  const filtered = filteredSortedTeams();
+  downloadCSV("teams", ["Rank", "Team Name", "Leader", "Members", "Points", "Gold", "Silver", "Bronze"],
+    filtered.map((t, i) => [i + 1, t.name, t.leader, state.students.filter(s => s.teamId === t.id).length, t.pts, t.medals.g, t.medals.s, t.medals.b]));
 });
 
 // View Team roster (Excel-style table + CSV)
@@ -403,16 +443,21 @@ window._viewTeam = (id) => {
 // ══════════════════════════════════════════════════════
 // STUDENTS
 // ══════════════════════════════════════════════════════
+// Shared by the table render and the CSV export so the export always
+// reflects exactly what's currently on screen (active search + filters).
+function filteredStudents() {
+  const search = val("student-search").toLowerCase();
+  const catF = val("student-filter-cat"), teamF = val("student-filter-team");
+  return state.students.filter(s =>
+    (s.name.toLowerCase().includes(search) || String(s.chestNumber).includes(search)) &&
+    (!catF || s.category === catF) && (!teamF || s.teamId == teamF));
+}
 function renderStudents() {
   const teamSel = document.getElementById("student-filter-team");
   const curTeam = teamSel.value;
   teamSel.innerHTML = '<option value="">All Teams</option>' + state.teams.map(t => `<option value="${t.id}" ${curTeam == t.id ? "selected" : ""}>${esc(t.name)}</option>`).join("");
 
-  const search = val("student-search").toLowerCase();
-  const catF = val("student-filter-cat"), teamF = val("student-filter-team");
-  const filtered = state.students.filter(s =>
-    (s.name.toLowerCase().includes(search) || String(s.chestNumber).includes(search)) &&
-    (!catF || s.category === catF) && (!teamF || s.teamId == teamF));
+  const filtered = filteredStudents();
 
   const tbody = document.getElementById("students-tbody");
   tbody.innerHTML = filtered.length ? filtered.map((s, i) => {
@@ -471,7 +516,7 @@ on("btn-save-student", "click", async () => {
   if (!teamId) { showError("student-team-err");   mark("student-team");   valid = false; }
   if (!valid) return;
   const id = val("student-id");
-  const dup = state.students.find(s => String(s.chestNumber) === chest && s.id !== id);
+  const dup = state.students.find(s => s.id !== id && normalizeChest(s.chestNumber) === normalizeChest(chest));
   if (dup) { showError("student-chest-err"); document.getElementById("student-chest-err").textContent = "Chest number already in use."; mark("student-chest"); return; }
   const data = { name, chestNumber: chest, category: cat, teamId };
   try {
@@ -486,15 +531,18 @@ on("student-search", "input", renderStudents);
 on("student-filter-cat", "change", renderStudents);
 on("student-filter-team", "change", renderStudents);
 on("btn-export-students", "click", () => {
-  downloadCSV("students", ["Chest No.", "Name", "Category", "Team"],
-    state.students.map(s => [s.chestNumber, s.name, s.category, teamById(s.teamId)?.name || ""]));
+  // Same rows (respecting the active search/filters) and the same column
+  // order as the on-screen table: #, Chest No., Name, Team, Category,
+  // Actions — minus the row number and Actions column.
+  downloadCSV("students", ["Chest No.", "Name", "Team", "Category"],
+    filteredStudents().map(s => [s.chestNumber, s.name, teamById(s.teamId)?.name || "", s.category]));
 });
 
 // ══════════════════════════════════════════════════════
 // ASSIGN INDIVIDUAL PROGRAM (by chest number)
 // ══════════════════════════════════════════════════════
 function renderAssignIndividual() {
-  populateSelect("ai-program", state.programs.filter(p => p.type === "Individual"), "", p => `${p.name} (${p.category})`);
+  populateAiProgramOptions();
   const rows = state.assignments.filter(a => a.type === "individual").flatMap(a =>
     (a.studentIds || []).map(sid => ({ a, sid })));
   const tbody = document.getElementById("assign-individual-tbody");
@@ -510,25 +558,56 @@ function renderAssignIndividual() {
   }).join("") : emptyRow(6, "No individual assignments yet.", "fa-user-check");
   applyRoleGating();
 }
+// Once a chest number resolves to a real student, narrow the program list to
+// that student's own category — without this, nothing stopped assigning e.g.
+// a Sub Junior student into a Senior program.
+function populateAiProgramOptions() {
+  const s = findStudentByChest(val("ai-chest"));
+  const pool = state.programs.filter(p => p.type === "Individual" && (!s || p.category === s.category));
+  populateSelect("ai-program", pool, "", p => `${p.name} (${p.category})`);
+}
+// Debounced so the "not found" message doesn't flash on every keystroke
+// while the user is still in the middle of typing a valid chest number —
+// it only appears once they've paused, and disappears immediately (no
+// delay) the moment a real match is typed.
+let aiChestNotFoundTimer = null;
 on("ai-chest", "input", () => {
-  const s = state.students.find(x => String(x.chestNumber) === val("ai-chest").trim());
-  document.getElementById("ai-preview").innerHTML = s
-    ? `<strong>${esc(s.name)}</strong> · ${esc(teamById(s.teamId)?.name || "—")} · <span class="badge badge-blue">${esc(s.category)}</span>`
-    : `<span class="text-muted">No student found with that chest number.</span>`;
+  clearTimeout(aiChestNotFoundTimer);
+  const raw = val("ai-chest");
+  const s = findStudentByChest(raw);
+  const preview = document.getElementById("ai-preview");
+  if (s) {
+    preview.innerHTML = `<strong>${esc(s.name)}</strong> · ${esc(teamById(s.teamId)?.name || "—")} · <span class="badge badge-blue">${esc(s.category)}</span>`;
+  } else if (!raw.trim()) {
+    preview.innerHTML = "";
+  } else {
+    aiChestNotFoundTimer = setTimeout(() => {
+      preview.innerHTML = `<span class="text-muted">No student found with that chest number.</span>`;
+    }, 500);
+  }
+  populateAiProgramOptions();
 });
 on("btn-assign-individual", "click", async () => {
   if (!isAdmin()) return;
   const chest = val("ai-chest").trim(), programId = val("ai-program");
   const err = document.getElementById("ai-err"); err.style.display = "none";
-  const s = state.students.find(x => String(x.chestNumber) === chest);
+  const s = findStudentByChest(chest);
   if (!s) { err.textContent = "No student found with that chest number."; err.style.display = "block"; return; }
   if (!programId) { err.textContent = "Please select a program."; err.style.display = "block"; return; }
+  const prog = progById(programId);
+  // Defense in depth: the dropdown is already filtered to matching-category
+  // programs, but re-check here too in case of a stale selection.
+  if (prog && prog.category !== s.category) {
+    err.textContent = `Category mismatch: ${s.name} is ${s.category}, but this program is for ${prog.category}.`;
+    err.style.display = "block"; return;
+  }
   const dup = state.assignments.find(a => a.type === "individual" && a.programId === programId && (a.studentIds || []).includes(s.id));
   if (dup) { err.textContent = "This student is already assigned to that program."; err.style.display = "block"; return; }
   try {
     await addAssignment({ programId, type: "individual", teamId: null, studentIds: [s.id] });
     await logActivity(`Assigned <strong>${esc(s.name)}</strong> to <strong>${esc(progById(programId)?.name)}</strong>`);
     val("ai-chest", ""); document.getElementById("ai-preview").innerHTML = "";
+    populateAiProgramOptions();
     toast("Assigned!");
   } catch (e) { toast("Failed to assign.", "error"); }
 });
@@ -577,12 +656,18 @@ function renderAssignGroup() {
   }).join("") : emptyRow(4, "No group assignments yet.", "fa-people-group");
   applyRoleGating();
 }
+// The member checklist depends on BOTH the team and the program: only that
+// team's students whose category matches the program's category can be
+// picked, otherwise e.g. a Junior student could get entered into a Senior
+// group item. Program is required first so we know which category to filter by.
 function refreshGroupMemberList(selected = []) {
-  const teamId = val("ag-team");
+  const teamId = val("ag-team"), programId = val("ag-program");
   const container = document.getElementById("ag-members-list");
-  const members = state.students.filter(s => s.teamId === teamId);
+  if (!programId) { container.innerHTML = '<p class="text-muted" style="grid-column:span 2;font-size:0.8rem;">Select a program first.</p>'; return; }
   if (!teamId) { container.innerHTML = '<p class="text-muted" style="grid-column:span 2;font-size:0.8rem;">Select a team first.</p>'; return; }
-  if (!members.length) { container.innerHTML = '<p class="text-muted" style="grid-column:span 2;font-size:0.8rem;">No students in this team yet.</p>'; return; }
+  const prog = progById(programId);
+  const members = state.students.filter(s => s.teamId === teamId && (!prog || s.category === prog.category));
+  if (!members.length) { container.innerHTML = `<p class="text-muted" style="grid-column:span 2;font-size:0.8rem;">No ${prog ? esc(prog.category) + " " : ""}students in this team.</p>`; return; }
   container.innerHTML = members.map(m => `
     <label style="display:flex;align-items:center;gap:7px;font-size:0.8rem;cursor:pointer;padding:4px 0;">
       <input type="checkbox" value="${m.id}" ${selected.includes(m.id) ? "checked" : ""} style="accent-color:var(--green-600);width:14px;height:14px;">
@@ -590,6 +675,7 @@ function refreshGroupMemberList(selected = []) {
     </label>`).join("");
 }
 on("ag-team", "change", () => refreshGroupMemberList());
+on("ag-program", "change", () => refreshGroupMemberList());
 on("btn-add-assign-group", "click", () => {
   if (!isAdmin()) return;
   setText("modal-assign-group-title", "Assign Group Program");
@@ -624,6 +710,12 @@ on("btn-save-assign-group", "click", async () => {
   const studentIds = [...document.querySelectorAll("#ag-members-list input:checked")].map(cb => cb.value);
   const err = document.getElementById("ag-err"); err.style.display = "none";
   if (!programId || !teamId) { err.textContent = "Program and team are required."; err.style.display = "block"; return; }
+  if (!studentIds.length) { err.textContent = "Select at least one member."; err.style.display = "block"; return; }
+  const prog = progById(programId);
+  if (prog?.maxTeam && studentIds.length > prog.maxTeam) {
+    err.textContent = `This program allows a maximum of ${prog.maxTeam} member(s) — you selected ${studentIds.length}.`;
+    err.style.display = "block"; return;
+  }
   const id = val("ag-id");
   const dup = state.assignments.find(a => a.type === "group" && a.programId === programId && a.teamId === teamId && a.id !== id);
   if (dup) { err.textContent = "This team is already assigned to that program."; err.style.display = "block"; return; }
@@ -677,9 +769,41 @@ function renderListProgram() {
     <td>${esc(r.who)}</td><td>${esc(r.name)}</td><td>${esc(r.team)}</td></tr>`).join("")
     : emptyRow(6, "No assignments found.", "fa-clipboard-list");
 
+  // Export builds one printable block per program — institution name, then
+  // the program's Sl No / name / category, then a Sl No / Chest Number /
+  // Code Letter / Name / Team table of its participants — matching the
+  // physical chest-number sheets used at the venue, instead of one giant
+  // flat table. Group members are listed individually (their own chest
+  // number) so each performer can still be called out by number.
   document.getElementById("btn-export-list-program").onclick = () => {
-    downloadCSV("list-by-program", ["Program", "Category", "Type", "Chest No. / Team", "Name(s)", "Team"],
-      rows.map(r => [r.program, r.category, r.type, r.who, r.name, r.team]));
+    const eventName = state.settings.eventName || "ArtsFest";
+    const blocks = [];
+    progs.forEach(p => {
+      const slNo = state.programs.findIndex(x => x.id === p.id) + 1;
+      const participants = [];
+      state.assignments.filter(a => a.programId === p.id).forEach(a => {
+        if (a.type === "individual") {
+          (a.studentIds || []).forEach(sid => {
+            const s = studentById(sid); if (!s) return;
+            participants.push({ chest: s.chestNumber, name: s.name, team: teamById(s.teamId)?.name || "" });
+          });
+        } else if (a.type === "group") {
+          const t = teamById(a.teamId);
+          (a.studentIds || []).forEach(sid => {
+            const s = studentById(sid); if (!s) return;
+            participants.push({ chest: s.chestNumber, name: s.name, team: t?.name || "" });
+          });
+        }
+      });
+      blocks.push([eventName, "", "", "", ""]);
+      blocks.push([slNo, p.name, p.category, "", ""]);
+      blocks.push(["Sl No", "Chest Number", "Code Letter", "Name", "Team"]);
+      if (participants.length) participants.forEach((pt, i) => blocks.push([i + 1, pt.chest, "", pt.name, pt.team]));
+      else blocks.push(["", "No participants assigned yet.", "", "", ""]);
+      blocks.push([]);
+    });
+    if (!blocks.length) { toast("No programs to export.", "warn"); return; }
+    downloadCSV("chest-number-list", blocks[0], blocks.slice(1));
   };
 }
 on("lp-category", "change", renderListProgram);
@@ -694,7 +818,7 @@ function renderListStudent() {
 
   const rows = filtered.map(s => {
     const indiv = state.assignments.filter(a => a.type === "individual" && (a.studentIds || []).includes(s.id)).map(a => progById(a.programId)?.name).filter(Boolean);
-    const group = state.assignments.filter(a => a.type === "group" && a.teamId === s.teamId).map(a => progById(a.programId)?.name).filter(Boolean);
+    const group = state.assignments.filter(a => a.type === "group" && a.teamId === s.teamId && (a.studentIds || []).includes(s.id)).map(a => progById(a.programId)?.name).filter(Boolean);
     return { s, programs: [...indiv, ...group] };
   });
 
@@ -773,25 +897,42 @@ on("marks-program", "change", renderMarks);
 on("marks-judges", "input", renderMarks);
 on("btn-export-marks", "click", () => {
   const programId = val("marks-program");
-  const rows = state.marks.filter(m => !programId || m.programId === programId).map(m => [
-    progById(m.programId)?.name || "", participantLabel(m.participantKey).replace(/<[^>]*>/g, ""),
-    (m.judgeMarks || []).join(" | "), m.average.toFixed(1)
-  ]);
-  downloadCSV("marks", ["Program", "Participant", "Judge Marks", "Average"], rows);
+  const filtered = state.marks.filter(m => !programId || m.programId === programId);
+  if (!filtered.length) { toast("No marks to export.", "warn"); return; }
+  // Break judge marks into individual J1, J2… columns instead of one
+  // merged string, matching the table's own column layout. With a
+  // program selected, this is an exact match of what's on screen
+  // (Participant, J1..Jn, Average); with no program selected there's no
+  // single on-screen table to mirror, so a Program column is added to
+  // keep the rows identifiable.
+  const maxJudges = Math.max(1, ...filtered.map(m => (m.judgeMarks || []).length));
+  const judgeHeaders = Array.from({ length: maxJudges }, (_, i) => `J${i + 1}`);
+  const headers = programId ? ["Participant", ...judgeHeaders, "Average"] : ["Program", "Participant", ...judgeHeaders, "Average"];
+  const rows = filtered.map(m => {
+    const judgeCols = Array.from({ length: maxJudges }, (_, i) => m.judgeMarks?.[i] ?? "");
+    const row = [participantLabel(m.participantKey).replace(/<[^>]*>/g, ""), ...judgeCols, m.average.toFixed(1)];
+    return programId ? row : [progById(m.programId)?.name || "", ...row];
+  });
+  downloadCSV("marks", headers, rows);
 });
 
 // ══════════════════════════════════════════════════════
 // RESULTS
 // ══════════════════════════════════════════════════════
-function renderResults() {
+// Shared by the table render and the CSV export so the export always
+// reflects exactly what's currently on screen (active search + filters).
+function filteredResults() {
   const search = val("result-search").toLowerCase();
   const catF = val("result-filter-cat"), statF = val("result-filter-status");
-  const filtered = state.programs.filter(p => {
+  return state.programs.filter(p => {
     const r = state.results.find(x => x.id === p.id);
     const has = r && (r.first || r.second || r.third);
     return (p.name.toLowerCase().includes(search) || p.category.toLowerCase().includes(search)) &&
       (!catF || p.category === catF) && (!statF || (statF === "entered" && has) || (statF === "pending" && !has));
   });
+}
+function renderResults() {
+  const filtered = filteredResults();
 
   const tbody = document.getElementById("results-tbody");
   tbody.innerHTML = filtered.length ? filtered.map(p => {
@@ -803,7 +944,10 @@ function renderResults() {
       <td>${r?.second ? `<span class="result-indicator ri-runner">🥈 ${participantLabel(r.second)}</span>` : '<span class="text-muted">—</span>'}</td>
       <td>${r?.third  ? `<span class="result-indicator ri-third">🥉 ${participantLabel(r.third)}</span>`   : '<span class="text-muted">—</span>'}</td>
       <td>${has ? '<span class="badge badge-green">Declared</span>' : '<span class="badge badge-slate">Pending</span>'}</td>
-      <td data-admin><button class="btn btn-sm ${has ? "btn-secondary" : "btn-primary"}" onclick="window._openResultModal('${p.id}')">${has ? '<i class="fa-solid fa-pen"></i> Edit' : '<i class="fa-solid fa-plus"></i> Declare'}</button></td>
+      <td class="actions" data-admin>
+        <button class="btn btn-sm ${has ? "btn-secondary" : "btn-primary"}" onclick="window._openResultModal('${p.id}')">${has ? '<i class="fa-solid fa-pen"></i> Edit' : '<i class="fa-solid fa-plus"></i> Declare'}</button>
+        ${has ? `<button class="btn-icon danger" title="Delete Result" onclick="window._deleteResult('${p.id}')"><i class="fa-solid fa-trash"></i></button>` : ""}
+      </td>
     </tr>`;
   }).join("") : emptyRow(7, "No programs yet.", "fa-trophy");
   applyRoleGating();
@@ -860,12 +1004,25 @@ on("btn-save-result", "click", async () => {
   } catch (e) { toast("Failed to save result.", "error"); }
   finally { setBtnLoading("btn-save-result", false); }
 });
+window._deleteResult = async (programId) => {
+  if (!isAdmin()) return;
+  const p = progById(programId); if (!p) return;
+  if (!await showConfirm("Delete Result", `Delete the declared result for "${p.name}"? This program will go back to Pending.`, "Delete")) return;
+  try {
+    await deleteResult(programId);
+    state.results = state.results.filter(r => r.id !== programId);
+    await logActivity(`Deleted result for <strong>${esc(p.name)}</strong>`, "red");
+    toast("Result deleted.");
+  } catch (e) { toast("Failed to delete result.", "error"); }
+};
 on("result-search", "input", renderResults);
 on("result-filter-cat", "change", renderResults);
 on("result-filter-status", "change", renderResults);
 on("btn-export-results", "click", () => {
+  // Same rows (respecting the active search/filters) as the on-screen
+  // table. Status/Actions are left out since they're UI-only concepts.
   downloadCSV("results", ["Program", "Category", "1st", "2nd", "3rd"],
-    state.programs.map(p => { const r = state.results.find(x => x.id === p.id); return [p.name, p.category,
+    filteredResults().map(p => { const r = state.results.find(x => x.id === p.id); return [p.name, p.category,
       r?.first ? participantLabel(r.first).replace(/<[^>]*>/g, "") : "", r?.second ? participantLabel(r.second).replace(/<[^>]*>/g, "") : "", r?.third ? participantLabel(r.third).replace(/<[^>]*>/g, "") : ""]; }));
 });
 
