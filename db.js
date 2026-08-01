@@ -1,26 +1,3 @@
-// ============================================================
-// db.js — Firebase Firestore database layer
-// ============================================================
-// SETUP:
-//   Re-uses the same Firebase project as your previous ArtsFest build.
-//   New collections used here (created automatically the first time
-//   you write to them — Firestore is schemaless, nothing to set up):
-//     programs, teams, students, assignments, marks, results,
-//     settings, activity, roles
-//
-//   Roles are still stored in /roles/{uid} = { role: "admin" | "user" }
-//   Create an admin doc for yourself first, everyone else defaults
-//   to "user" (view-only) automatically if no role doc exists.
-//
-//   IMPORTANT — SECURITY: the "admin vs user" split enforced by this
-//   file and app.js is a UI convenience only. It does NOT stop a
-//   signed-in "user" account from opening devtools and calling
-//   Firestore's SDK directly to write data. You MUST also deploy
-//   Firestore Security Rules that check /roles/{uid} server-side.
-//   A ready-to-use rules file is included alongside this project
-//   (firestore.rules) — deploy it with `firebase deploy --only firestore:rules`.
-// ============================================================
-
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import {
   getFirestore, collection, doc,
@@ -34,7 +11,7 @@ import {
 // ── YOUR FIREBASE CONFIG ─────────────────────────────────────
 // Replace with your own project config from the Firebase console
 const firebaseConfig = {
-  apiKey: "AIzaSyBrPawHDgM_qLWp5YvGJQUpYexbcNFy51w",
+  apiKey: "",
   authDomain: "eventmanagementdb-96827.firebaseapp.com",
   projectId: "eventmanagementdb-96827",
   storageBucket: "eventmanagementdb-96827.firebasestorage.app",
