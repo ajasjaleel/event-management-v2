@@ -90,10 +90,6 @@ function applyRoleToUI() {
 // ══════════════════════════════════════════════════════
 function showLogin()     {
   document.getElementById("login-page").style.display = "flex"; document.getElementById("dashboard-page").style.display = "none";
-  // Reset the login button — it's left in its "Signing in…" / disabled
-  // state after a successful login (the page just navigates away from
-  // it), so without this it comes back stuck the next time showLogin()
-  // runs, e.g. right after signing out.
   const btn = document.getElementById("loginBtn");
   if (btn) { btn.innerHTML = '<i class="fa-solid fa-right-to-bracket"></i> Sign In'; btn.disabled = false; }
 }
@@ -143,12 +139,6 @@ function setText(id, v) { const el = document.getElementById(id); if (el) el.tex
 const teamById    = id => state.teams.find(t => t.id === id);
 const studentById = id => state.students.find(s => s.id === id);
 
-// Normalizes a chest number for comparison: trims outer whitespace and
-// strips any internal whitespace too (e.g. a stray space pasted in from
-// a spreadsheet, or a mobile keyboard inserting one) so a real, existing
-// chest number never fails to match just because of formatting. Used
-// everywhere a chest number is looked up, so every lookup behaves
-// identically instead of each spot having its own copy of the logic.
 function normalizeChest(v) { return String(v ?? "").replace(/\s+/g, "").trim(); }
 function findStudentByChest(raw) {
   const key = normalizeChest(raw);
@@ -243,9 +233,6 @@ function renderDashboard() {
 // ══════════════════════════════════════════════════════
 // PROGRAMS
 // ══════════════════════════════════════════════════════
-// Shared by the table render and the CSV export so the export always
-// reflects exactly what's currently on screen (active search + filters),
-// instead of silently dumping every program regardless of what's shown.
 function filteredPrograms() {
   const search = val("prog-search").toLowerCase();
   const catF = val("prog-filter-cat"), typeF = val("prog-filter-type"), stageF = val("prog-filter-stage");
@@ -339,9 +326,6 @@ on("btn-export-programs", "click", () => {
 // ══════════════════════════════════════════════════════
 // TEAMS
 // ══════════════════════════════════════════════════════
-// Shared by the table render and the CSV export: same points-ranked
-// order and the same search filter, so "Rank" in the CSV always lines up
-// with the rank badge shown in the table.
 function filteredSortedTeams() {
   const search = val("team-search").toLowerCase();
   const { pts, medals } = computePoints();
@@ -443,8 +427,6 @@ window._viewTeam = (id) => {
 // ══════════════════════════════════════════════════════
 // STUDENTS
 // ══════════════════════════════════════════════════════
-// Shared by the table render and the CSV export so the export always
-// reflects exactly what's currently on screen (active search + filters).
 function filteredStudents() {
   const search = val("student-search").toLowerCase();
   const catF = val("student-filter-cat"), teamF = val("student-filter-team");
@@ -558,9 +540,6 @@ function renderAssignIndividual() {
   }).join("") : emptyRow(6, "No individual assignments yet.", "fa-user-check");
   applyRoleGating();
 }
-// Once a chest number resolves to a real student, narrow the program list to
-// that student's own category — without this, nothing stopped assigning e.g.
-// a Sub Junior student into a Senior program.
 function populateAiProgramOptions() {
   const s = findStudentByChest(val("ai-chest"));
   const pool = state.programs.filter(p => p.type === "Individual" && (!s || p.category === s.category));
@@ -656,10 +635,6 @@ function renderAssignGroup() {
   }).join("") : emptyRow(4, "No group assignments yet.", "fa-people-group");
   applyRoleGating();
 }
-// The member checklist depends on BOTH the team and the program: only that
-// team's students whose category matches the program's category can be
-// picked, otherwise e.g. a Junior student could get entered into a Senior
-// group item. Program is required first so we know which category to filter by.
 function refreshGroupMemberList(selected = []) {
   const teamId = val("ag-team"), programId = val("ag-program");
   const container = document.getElementById("ag-members-list");
@@ -693,9 +668,6 @@ window._editAssignGroup = (id) => {
   refreshGroupMemberList(a.studentIds || []);
   openModal("modal-assign-group");
 };
-// A group assignment maps to exactly one team+program pair, so removing it
-// always means removing the whole assignment doc — use the cascade delete so
-// leftover marks/result placements for that team in that program don't linger.
 window._deleteAssignGroup = async (id, programId, teamId) => {
   if (!isAdmin()) return;
   if (!await showConfirm("Remove Assignment", "Remove this group assignment? The team's marks and result placement for this program will also be cleared.", "Remove")) return;
@@ -769,12 +741,6 @@ function renderListProgram() {
     <td>${esc(r.who)}</td><td>${esc(r.name)}</td><td>${esc(r.team)}</td></tr>`).join("")
     : emptyRow(6, "No assignments found.", "fa-clipboard-list");
 
-  // Export builds one printable block per program — institution name, then
-  // the program's Sl No / name / category, then a Sl No / Chest Number /
-  // Code Letter / Name / Team table of its participants — matching the
-  // physical chest-number sheets used at the venue, instead of one giant
-  // flat table. Group members are listed individually (their own chest
-  // number) so each performer can still be called out by number.
   document.getElementById("btn-export-list-program").onclick = () => {
     const eventName = state.settings.eventName || "ArtsFest";
     const blocks = [];
@@ -840,11 +806,6 @@ on("ls-search", "input", renderListStudent);
 // MARKS
 // ══════════════════════════════════════════════════════
 function renderMarks() {
-  // withAll=false here: unlike "List by Program", Marks has no logic to show
-  // "all programs at once" — selecting an "All Programs" option would just be
-  // a dead-end that re-displays the "select a program" placeholder. Keep the
-  // default as a plain "Select…" prompt so the dropdown doesn't promise
-  // something the view can't actually do.
   populateSelect("marks-program", state.programs, "", p => `${p.name} (${p.category})`, false);
   const programId = val("marks-program");
   const judgeCount = Math.max(1, parseInt(val("marks-judges")) || 3);
@@ -899,12 +860,6 @@ on("btn-export-marks", "click", () => {
   const programId = val("marks-program");
   const filtered = state.marks.filter(m => !programId || m.programId === programId);
   if (!filtered.length) { toast("No marks to export.", "warn"); return; }
-  // Break judge marks into individual J1, J2… columns instead of one
-  // merged string, matching the table's own column layout. With a
-  // program selected, this is an exact match of what's on screen
-  // (Participant, J1..Jn, Average); with no program selected there's no
-  // single on-screen table to mirror, so a Program column is added to
-  // keep the rows identifiable.
   const maxJudges = Math.max(1, ...filtered.map(m => (m.judgeMarks || []).length));
   const judgeHeaders = Array.from({ length: maxJudges }, (_, i) => `J${i + 1}`);
   const headers = programId ? ["Participant", ...judgeHeaders, "Average"] : ["Program", "Participant", ...judgeHeaders, "Average"];
@@ -919,8 +874,6 @@ on("btn-export-marks", "click", () => {
 // ══════════════════════════════════════════════════════
 // RESULTS
 // ══════════════════════════════════════════════════════
-// Shared by the table render and the CSV export so the export always
-// reflects exactly what's currently on screen (active search + filters).
 function filteredResults() {
   const search = val("result-search").toLowerCase();
   const catF = val("result-filter-cat"), statF = val("result-filter-status");
@@ -966,7 +919,6 @@ window._openResultModal = (programId) => {
   val("result-1st", r.first || ""); val("result-2nd", r.second || ""); val("result-3rd", r.third || "");
   document.getElementById("result-dup-err").style.display = "none";
   updatePointsPreview();
-  // auto-suggest from marks
   document.getElementById("btn-auto-from-marks").onclick = () => {
     const ranked = participants.map(pt => ({ ...pt, avg: state.marks.find(m => m.programId === programId && m.participantKey === pt.key)?.average ?? -1 }))
       .sort((a, b) => b.avg - a.avg).filter(pt => pt.avg >= 0);
