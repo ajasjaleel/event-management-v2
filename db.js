@@ -9,7 +9,6 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
 // ── YOUR FIREBASE CONFIG ─────────────────────────────────────
-// Replace with your own project config from the Firebase console
 const firebaseConfig = {
   apiKey: "",
   authDomain: "eventmanagementdb-96827.firebaseapp.com",
@@ -74,12 +73,6 @@ export async function getTeams() {
 export async function addTeam(data) { return addDoc(collection(db, TEAMS), { ...data, createdAt: serverTimestamp() }); }
 export async function updateTeam(id, data) { return updateDoc(doc(db, TEAMS, id), data); }
 
-// Deleting a team must also clean up everything that referenced its
-// students so the app never shows dangling "—" participants in Marks
-// or Results after the fact: the team's own assignments, any
-// individual assignments its students held, marks recorded for the
-// team or its students, and any 1st/2nd/3rd placements pointing at
-// the team or its students.
 export async function deleteTeamCascade(teamId, studentIds) {
   const batch = writeBatch(db);
   batch.delete(doc(db, TEAMS, teamId));
@@ -122,9 +115,6 @@ export async function getStudents() {
 export async function addStudent(data) { return addDoc(collection(db, STUDENTS), { ...data, createdAt: serverTimestamp() }); }
 export async function updateStudent(id, data) { return updateDoc(doc(db, STUDENTS, id), data); }
 
-// Removing a single student must not leave orphaned references behind:
-// pull them out of any individual/group assignment, delete any marks
-// recorded for them, and clear them out of any declared result.
 export async function deleteStudentCascade(studentId) {
   const batch = writeBatch(db);
   const key = "s_" + studentId;
@@ -158,8 +148,6 @@ export async function deleteStudentCascade(studentId) {
 
   return batch.commit();
 }
-// Kept for backwards compatibility / places that genuinely only want
-// the bare delete — prefer deleteStudentCascade everywhere in the app.
 export async function deleteStudent(id) { return deleteDoc(doc(db, STUDENTS, id)); }
 
 // ── ASSIGNMENTS (admin write, everyone read) ──────────────────
@@ -171,10 +159,6 @@ export async function addAssignment(data) { return addDoc(collection(db, ASSIGNM
 export async function updateAssignment(id, data) { return updateDoc(doc(db, ASSIGNMENTS, id), data); }
 export async function deleteAssignment(id) { return deleteDoc(doc(db, ASSIGNMENTS, id)); }
 
-// Removing a participant's assignment to a program should also drop any
-// marks entered for them in that program and clear them from that
-// program's declared result, otherwise Marks/Results keep showing a
-// participant who is no longer actually assigned.
 export async function deleteAssignmentCascade(assignmentId, programId, participantKey) {
   const batch = writeBatch(db);
   batch.delete(doc(db, ASSIGNMENTS, assignmentId));
@@ -222,9 +206,6 @@ export async function logActivity(msg, type = "green") {
     user: currentUser()?.email || "unknown"
   });
 }
-// Bounded at the query level (not just sliced client-side afterwards)
-// so the activity log doesn't turn into an ever-growing full-collection
-// read as the event goes on.
 export async function getRecentActivity(limitCount = 20) {
   const snap = await getDocs(query(collection(db, ACTIVITY), orderBy("createdAt", "desc"), limit(limitCount)));
   return snap.docs.map(d => d.data());
