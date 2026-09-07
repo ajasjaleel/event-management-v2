@@ -10,13 +10,12 @@ import {
 
 // ── YOUR FIREBASE CONFIG ─────────────────────────────────────
 const firebaseConfig = {
-  apiKey: "AIzaSyBrPawHDgM_qLWp5YvGJQUpYexbcNFy51w",
-  authDomain: "eventmanagementdb-96827.firebaseapp.com",
-  projectId: "eventmanagementdb-96827",
-  storageBucket: "eventmanagementdb-96827.firebasestorage.app",
-  messagingSenderId: "389609505903",
-  appId: "1:389609505903:web:94bc753b4ce5bfc025f99a",
-  measurementId: "G-17EV9PH07L"
+  apiKey: "AIzaSyB8E2qqgG-tniKDYPtIbRO-erCKJn1TwOE",
+  authDomain: "artsfest-64276.firebaseapp.com",
+  projectId: "artsfest-64276",
+  storageBucket: "artsfest-64276.firebasestorage.app",
+  messagingSenderId: "736234982900",
+  appId: "1:736234982900:web:9119bc20081f9849d7bda1"
 };
 
 const app  = initializeApp(firebaseConfig);
